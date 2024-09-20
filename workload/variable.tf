@@ -15,6 +15,5 @@ type = map(object({
   name = string
   address_space = string
   
-}))
-  
+})) 
 }
