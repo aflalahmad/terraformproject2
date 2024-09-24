@@ -27,6 +27,17 @@ subnet = {
   },
 }
 
+nic = {
+  "nic_subnet1" = {
+    name = "nic1"
+    ip_configuration = {
+      ip_config_details = {
+    ip_config_name = "ipconfig1"
+    private_ip_allocation = "Dynamic"
+  }
+}
+  }}
+  
 nsg_name = ["nsg1","nsg2","nsg3"]
 
 # public_ip = {
