@@ -43,17 +43,21 @@ variable "nsg_name" {
 variable "lb" {
   type = map(object({
      name = string
-     sku = string
-     sku_tier  =string
-    # edge_zone = string
      frontendip = map(object({
-       name = string
-        private_ip_address = string
-        private_ip_address_allocation = string
-           # zones = list(string)
+       name = string  
      }))
-     
+  })) 
+}
 
+variable "keyvault_name" {
+  type = string
+  
+}
+
+variable "keyvault_secret" {
+  type = map(object({
+    name = string
+    value = string
   }))
   
 }

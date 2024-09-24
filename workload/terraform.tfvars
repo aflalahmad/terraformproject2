@@ -43,15 +43,24 @@ lb = {
 
     loadbalancer = {
         name = "load_balancer"
-        sku = "Standard"
-        sku_tier = "Regional"
+        
         frontendip = {
         frontendip_config = {
             name = "internal_lb_private_ip_1_config"
-            private_ip_address = "10.0.1.4"
-            private_ip_address_allocation= "Dynamic"
-            
         }
         }
     }
+}
+
+keyvault_name = "project6635"
+
+keyvault_secret = {
+  secret1 = {
+  name = "secretusername"
+  value = "terraformproject2"
+  },
+  secret2 = {
+    name = "secretpassword"
+    value = "P@ssword12345"
+  }
 }
