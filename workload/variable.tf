@@ -71,3 +71,11 @@ variable "keyvault_secret" {
   }))
   
 }
+
+variable "VMss" {
+  type = map(object({
+    name = string
+    instances = string
+    sku_name = string
+  }))
+}

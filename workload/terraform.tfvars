@@ -75,3 +75,11 @@ keyvault_secret = {
     value = "P@ssword12345"
   }
 }
+
+VMss = {
+  vmscaleset = {
+    name = "VMss"
+    instances = "2"
+    sku_name = "Standard_DS1_v2"
+  }
+}

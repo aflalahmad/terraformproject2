@@ -34,18 +34,6 @@ module "subnet" {
 }
 
 
-resource "azurerm_network_interface" "nic" {
-  for_each = var.nic
-  location            = var.location
-  name                = each.value.name
-  resource_group_name = module.rg.name
-
-  ip_configuration {
-    name                          = each.value.ip_configuration.ip_config_details.ip_config_name
-    private_ip_address_allocation = each.value.ip_configuration.ip_config_details.private_ip_allocation
-    subnet_id                     =  module.subnet["subnet1"].resource_id
-  }
-}
 
 module "networksecuritygroup" {
   source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
@@ -85,87 +73,134 @@ module "loadbalancer" {
       frontend_private_ip_subnet_resource_id = module.subnet["subnet1"].resource_id
     }
   }
+    # Backend Address Pool(s)
+  
+  backend_address_pools = {
+    pool1 = {
+      name = "myBackendPool"
+    }
+  }
+
+  
+    backend_address_pool_addresses = {
+    address1 = {
+      name                             = "ipconfig1" 
+      backend_address_pool_object_name = "pool1"
+      ip_address                       = ""
+      virtual_network_resource_id      = module.virtualnetwork["workloadVNet"].resource_id
+    }
+  }
+
+  # Health Probe(s)
+  lb_probes = {
+    tcp1 = {
+      name     = "myHealthProbe"
+      protocol = "Tcp"
+    }
+  }
+
+  # Load Balaner rule(s)
+  lb_rules = {
+    http1 = {
+      name                           = "myHTTPRule"
+      frontend_ip_configuration_name = "myFrontend"
+
+      backend_address_pool_object_names = ["pool1"]
+      protocol                          = "Tcp"
+      frontend_port                     = 80
+      backend_port                      = 80
+
+      probe_object_name = "tcp1"
+
+      idle_timeout_in_minutes = 15
+      enable_tcp_reset        = true
+    }
+  }
   
 }
 
-module "keyvault-vault" {
-  source  = "Azure/avm-res-keyvault-vault/azurerm"
-  version = "0.9.1"
-  name                           = var.keyvault_name
-  location                       = var.location
-  resource_group_name            = module.rg.name
-  tenant_id                      = data.azurerm_client_config.this.tenant_id
-  legacy_access_policies_enabled = true
-  legacy_access_policies = {
-    test = {
-      object_id          = data.azurerm_client_config.this.object_id
-      tenant_id          = data.azurerm_client_config.this.tenant_id
-      secret_permissions = [
-        "Get", "List"]
-    }
-  }
-   for_each = var.keyvault_secret
-   secrets = {
-    test_secret = {
-      name = each.value.name
-    }
-  }
-  secrets_value = {
-    test_secret = each.value.value
-  }
+
+
+# module "keyvault-vault" {
+#   source  = "Azure/avm-res-keyvault-vault/azurerm"
+#   version = "0.9.1"
+#   name                           = var.keyvault_name
+#   location                       = var.location
+#   resource_group_name            = module.rg.name
+#   tenant_id                      = data.azurerm_client_config.this.tenant_id
+#   legacy_access_policies_enabled = true
+#   legacy_access_policies = {
+#     test = {
+#       object_id          = data.azurerm_client_config.this.object_id
+#       tenant_id          = data.azurerm_client_config.this.tenant_id
+#       secret_permissions = [
+#         "Get", "List"]
+#     }
+#   }
+#    for_each = var.keyvault_secret
+#    secrets = {
+#     test_secret = {
+#       name = each.value.name
+#     }
+#   }
+#   secrets_value = {
+#     test_secret = each.value.value
+#   }
+# }
+
+resource "tls_private_key" "example_ssh" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
 }
 
-# module "virtualmachinescaleset" {
-#   source  = "Azure/avm-res-compute-virtualmachinescaleset/azurerm"
-#   version = "0.3.0"
-#   name                        = ""
-#   resource_group_name         = module.rg.name
-#   location                    = var.location
-#   admin_password              = ""
-#   instances                   = 2
-#   sku_name                    = module.get_valid_sku_for_deployment_region.sku
-#   extension_protected_setting = {}
-#   user_data_base64            = null
-#   boot_diagnostics = {
-#     storage_account_uri = "" # Enable boot diagnostics
-#   }
-#   admin_ssh_keys = [(
-#     {
-#       id         = tls_private_key.example_ssh.id
-#       public_key = tls_private_key.example_ssh.public_key_openssh
-#       username   = "azureuser"
-#     }
-#   )]
-#   network_interface = [{
-#     name                      = "VMSS-NIC"
-#     network_security_group_id = azurerm_network_security_group.nic.id
-#     ip_configuration = [{
-#       name      = "VMSS-IPConfig"
-#       subnet_id = azurerm_subnet.subnet.id
-#     }]
-#   }]
-#   os_profile = {
-#     custom_data = base64encode(file("custom-data.yaml"))
-#     linux_configuration = {
-#       disable_password_authentication = false
-#       user_data_base64                = base64encode(file("user-data.sh"))
-#       admin_username                  = "azureuser"
-#       admin_ssh_key                   = toset([tls_private_key.example_ssh.id])
-#     }
-#   }
-#   source_image_reference = {
-#     publisher = "Canonical"
-#     offer     = "0001-com-ubuntu-server-jammy"
-#     sku       = "22_04-LTS-gen2" # Auto guest patching is enabled on this sku.  https://learn.microsoft.com/en-us/azure/virtual-machines/automatic-vm-guest-patching
-#     version   = "latest"
-#   }
-#   extension = [{
-#     name                        = "HealthExtension"
-#     publisher                   = "Microsoft.ManagedServices"
-#     type                        = "ApplicationHealthLinux"
-#     type_handler_version        = "1.0"
-#     auto_upgrade_minor_version  = true
-#     failure_suppression_enabled = false
-#     settings                    = "{\"port\":80,\"protocol\":\"http\",\"requestPath\":\"/index.html\"}"
-#   }]
-# }
+module "virtualmachinescaleset" {
+  source  = "Azure/avm-res-compute-virtualmachinescaleset/azurerm"
+  version = "0.3.0"
+  for_each = var.VMss
+  name                        = each.value.name
+  resource_group_name         = module.rg.name
+  location                    = var.location
+  admin_password              = "P@ssword12345"
+  instances                   = each.value.instances
+  sku_name                    = each.value.sku_name
+  extension_protected_setting = {}
+  user_data_base64            = null
+  admin_ssh_keys = [(
+    {
+      username   = "azureuser"
+       public_key = tls_private_key.example_ssh.public_key_openssh
+      id= tls_private_key.example_ssh.id
+    }
+  )]
+  network_interface = [{
+    name                      = "VMSS-NIC"
+    network_security_group_id = module.networksecuritygroup["nsg1"].resource_id
+    ip_configuration = [{
+      name      = "VMSS-IPConfig"
+      subnet_id = module.subnet["subnet1"].resource_id
+    }]
+  }]
+  os_profile = {
+    custom_data = base64encode(file("custom-data.yaml"))
+    linux_configuration = {
+      disable_password_authentication = false
+      user_data_base64                = base64encode(file("user-data.sh"))
+      admin_username                  = "azureuser"
+    }
+  }
+  source_image_reference = {
+    publisher = "Canonical"
+    offer     = "0001-com-ubuntu-server-jammy"
+    sku       = "22_04-LTS-gen2" # Auto guest patching is enabled on this sku.  https://learn.microsoft.com/en-us/azure/virtual-machines/automatic-vm-guest-patching
+    version   = "latest"
+  }
+  extension = [{
+    name                        = "HealthExtension"
+    publisher                   = "Microsoft.ManagedServices"
+    type                        = "ApplicationHealthLinux"
+    type_handler_version        = "1.0"
+    auto_upgrade_minor_version  = true
+    failure_suppression_enabled = false
+    settings                    = "{\"port\":80,\"protocol\":\"http\",\"requestPath\":\"/index.html\"}"
+  }]
+}
