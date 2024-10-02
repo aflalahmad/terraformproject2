@@ -38,12 +38,14 @@ module "subnet" {
 module "networksecuritygroup" {
   source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
   version = "0.2.0"
-  for_each = toset(var.nsg_name)
-  name = each.key
+  for_each = module.subnet
+  name = "${each.key}-nsg"
   location = var.location
   resource_group_name = module.rg.name
-  depends_on = [ module.rg ]
+  security_rules = local.nsg_rules
+   depends_on = [ module.rg,module.subnet ]
 }
+
 
 
 
@@ -115,13 +117,14 @@ module "loadbalancer" {
       enable_tcp_reset        = true
     }
   }
-  
+  depends_on = [ module.rg,module.subnet,module.virtualmachinescaleset,data.azurerm_virtual_machine_scale_set.private_ip_address ]
 }
 
 
 resource "tls_private_key" "example_ssh" {
   algorithm = "RSA"
   rsa_bits  = 4096
+  depends_on = [ module.virtualmachinescaleset ]
 }
 
 
@@ -146,7 +149,7 @@ module "virtualmachinescaleset" {
   )]
   network_interface = [{
     name                      = "VMSS-NIC"
-    network_security_group_id = module.networksecuritygroup["nsg1"].resource_id
+    network_security_group_id = module.networksecuritygroup["subnet1"].resource_id
     ip_configuration = [{
       name      = "VMSS-IPConfig"
       subnet_id = module.subnet["subnet1"].resource_id
@@ -176,11 +179,13 @@ module "virtualmachinescaleset" {
     failure_suppression_enabled = false
     settings                    = "{\"port\":80,\"protocol\":\"http\",\"requestPath\":\"/index.html\"}"
   }]
+  depends_on = [ module.rg,module.loadbalancer,module.subnet ]
 }
 
 data "azurerm_virtual_machine_scale_set" "private_ip_address" {
   name                = "VMss"
   resource_group_name = module.rg.name
+  depends_on = [ module.virtualmachinescaleset ]
 }
 
 
