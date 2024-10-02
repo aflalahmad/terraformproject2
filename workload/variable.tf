@@ -40,15 +40,6 @@ variable "nsg_name" {
   
 }
 
-# variable "public_ip" {
-#   type = map(object({
-#     name =string
-#     sku = string
-#     allocation_method = string
-#     sku_tier = string
-#   }))
-  
-# }
 
 variable "lb" {
   type = map(object({

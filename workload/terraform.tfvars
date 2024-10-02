@@ -40,15 +40,7 @@ nic = {
   
 nsg_name = ["nsg1","nsg2","nsg3"]
 
-# public_ip = {
-#     public_ip = {
-#     name = "public_ip"
-#     allocation_method = "Static"
-#     sku = "Standard"
-#     sku_tier = "Regional"
-   
-# }
-# }
+
 
 lb = {
 
