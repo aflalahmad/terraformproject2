@@ -38,29 +38,28 @@ module "subnet" {
 module "networksecuritygroup" {
   source  = "Azure/avm-res-network-networksecuritygroup/azurerm"
   version = "0.2.0"
-  for_each = toset(var.nsg_name)
-  name = each.key
+  for_each = module.subnet
+  name = "${each.key}-nsg"
   location = var.location
   resource_group_name = module.rg.name
-  depends_on = [ module.rg ]
+  depends_on = [ module.rg , module.subnet]
 }
 
 
-# # Associate NSG and Subnet
-# resource "azurerm_subnet_network_security_group_association" "ag_subnet_nsg_associate" {
-#    for_each                  = module.subnet
-#   # network_security_group_id = each.value.resource_id
-#   network_security_group_id = module.nsg[each.key].resource_id  
-#   #subnet_id = module.subnet[each.key].resource_id
-#   subnet_id = module.subnet[each.key].resource_id
-# }
-
+# Associate NSG and Subnet
+resource "azurerm_subnet_network_security_group_association" "ag_subnet_nsg_associate" {
+   for_each                  = module.subnet
+  # network_security_group_id = each.value.resource_id
+  network_security_group_id = module.networksecuritygroup[each.key].resource_id  
+  #subnet_id = module.subnet[each.key].resource_id
+  subnet_id = module.subnet[each.key].resource_id
+}
 
 resource "tls_private_key" "example_ssh" {
   algorithm = "RSA"
   rsa_bits  = 4096
+  depends_on = [ module.rg ]
 }
-
 
 module "virtualmachinescaleset" {
   source  = "Azure/avm-res-compute-virtualmachinescaleset/azurerm"
@@ -113,7 +112,7 @@ module "virtualmachinescaleset" {
     failure_suppression_enabled = false
     settings                    = "{\"port\":80,\"protocol\":\"http\",\"requestPath\":\"/index.html\"}"
   }]
-  depends_on = [ module.rg , module.subnet ]
+  depends_on = [ module.rg , module.subnet , tls_private_key.example_ssh ]
 }
 
 data "azurerm_virtual_machine_scale_set" "private_ip_address" {
@@ -190,73 +189,9 @@ module "loadbalancer" {
       enable_tcp_reset        = true
     }
   }
-  
+  depends_on = [ module.rg , module.subnet , module.virtualmachinescaleset , data.azurerm_virtual_machine_scale_set.private_ip_address ]
 }
 
-
-resource "tls_private_key" "example_ssh" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-
-module "virtualmachinescaleset" {
-  source  = "Azure/avm-res-compute-virtualmachinescaleset/azurerm"
-  version = "0.3.0"
-  for_each = var.VMss
-  name                        = each.value.name
-  resource_group_name         = module.rg.name
-  location                    = var.location
-  admin_password              = "P@ssword12345"
-  instances                   = each.value.instances
-  sku_name                    = each.value.sku_name
-  extension_protected_setting = {}
-  user_data_base64            = null
-  admin_ssh_keys = [(
-    {
-      username   = "azureuser"
-       public_key = tls_private_key.example_ssh.public_key_openssh
-      id= tls_private_key.example_ssh.id
-    }
-  )]
-  network_interface = [{
-    name                      = "VMSS-NIC"
-    network_security_group_id = module.networksecuritygroup["nsg1"].resource_id
-    ip_configuration = [{
-      name      = "VMSS-IPConfig"
-      subnet_id = module.subnet["subnet1"].resource_id
-      
-    }]
-  }]
-  os_profile = {
-    custom_data = base64encode(file("custom-data.yaml"))
-    linux_configuration = {
-      disable_password_authentication = false
-      user_data_base64                = base64encode(file("user-data.sh"))
-      admin_username                  = "azureuser"
-    }
-  }
-  source_image_reference = {
-    publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-LTS-gen2" # Auto guest patching is enabled on this sku.  https://learn.microsoft.com/en-us/azure/virtual-machines/automatic-vm-guest-patching
-    version   = "latest"
-  }
-  extension = [{
-    name                        = "HealthExtension"
-    publisher                   = "Microsoft.ManagedServices"
-    type                        = "ApplicationHealthLinux"
-    type_handler_version        = "1.0"
-    auto_upgrade_minor_version  = true
-    failure_suppression_enabled = false
-    settings                    = "{\"port\":80,\"protocol\":\"http\",\"requestPath\":\"/index.html\"}"
-  }]
-}
-
-data "azurerm_virtual_machine_scale_set" "private_ip_address" {
-  name                = "VMss"
-  resource_group_name = module.rg.name
-}
 
 
 
