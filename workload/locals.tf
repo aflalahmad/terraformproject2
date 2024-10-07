@@ -1,5 +1,5 @@
 locals {
-  nsg_rules = {
+     nsg_rules = {
     "rule01" = {
       name                       = "rules"
       access                     = "Allow"
@@ -12,5 +12,4 @@ locals {
       source_port_range          = "*"
     }
   }
- 
 }

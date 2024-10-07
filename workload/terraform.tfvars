@@ -30,8 +30,9 @@ subnet = {
 nic = {
   "nic_subnet1" = {
     name = "nic1"
+    primary = true
     ip_configuration = {
-      ip_config_details = {
+    ip_config_details = {
     ip_config_name = "ipconfig1"
     private_ip_allocation = "Dynamic"
   }
@@ -72,6 +73,16 @@ VMss = {
   vmscaleset = {
     name = "VMss"
     instances = "2"
-    sku_name = "Standard_DS1_v2"
+    sku_name = "Standard_DS3_v2"
+  } , 
+   vmscaleset02 = {
+    name = "VMss02"
+    instances = "2"
+    sku_name = "Standard_DS3_v2"
+  } , 
+   vmscaleset03 = {
+    name = "VMss03"
+    instances = "2"
+    sku_name = "Standard_DS3_v2"
   }
 }

@@ -28,6 +28,7 @@ variable "subnet" {
 variable "nic" {
   type = map(object({
     name = string
+    primary = bool
     ip_configuration = map(object({
       ip_config_name = string
       private_ip_allocation = string 
